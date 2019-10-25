@@ -1,0 +1,119 @@
+Description: >
+    This template deploys an Application Load Balancer that exposes our various services.
+    We create them it a seperate nested template, so it can be referenced by all of the other nested templates.
+
+Parameters:
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
+
+    VPC:
+        Type: AWS::EC2::VPC::Id
+        Description: Choose which VPC the Load Balancer should be deployed to
+
+    Subnets:
+        Description: Choose which subnets the Load Balancer should be deployed to
+        Type: List<AWS::EC2::Subnet::Id>
+
+    SecurityGroup:
+        Description: Select the Security Group to apply to the Load Balancer
+        Type: AWS::EC2::SecurityGroup::Id
+
+
+
+Resources:
+
+
+# Batch  
+
+  LBBatch:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-batch
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-batch
+
+
+# Gateway
+
+
+  LBGateway:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-gateway
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-gateway
+
+
+
+# Monitoring
+
+
+  LBMonitoring:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-monitoring
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-monitoring
+
+
+
+# Config
+
+
+  LBConfig:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-config
+      Subnets: !Ref Subnets
+      Scheme: internal
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-config
+
+
+
+# Discovery
+
+
+  LBDiscovery:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-discovery
+      Subnets: !Ref Subnets
+      Scheme: internal
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-discovery
+
+
+
+
+# Outputs:
+#   LBBatch:
+#     Description: A reference to the Application Load Balancer
+#     Value: !Ref LBBatch
+
+#   LBBatchUrl:
+#     Description: The URL of the ALB
+#     Value: !GetAtt LBBatch.DNSName
+
+#   ListenerBatch:
+#     Description: A reference to a port 80 listener
+#     Value: !Ref ListenerBatch

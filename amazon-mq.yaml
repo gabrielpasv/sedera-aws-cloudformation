@@ -1,0 +1,95 @@
+Description: >
+  This template deploys a Amazon MQ broker
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  Subnets:
+    Description: Choose which subnets this MQ should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+  MQSecurityGroup:
+    Description: Select the Security Group to use for the MQ
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  VPC:
+    Description: Choose which VPC this MQ should be deployed to
+    Type: AWS::EC2::VPC::Id
+
+
+
+Resources:
+
+  AmazonMQConfiguration:
+    Type: AWS::AmazonMQ::Configuration
+    Properties: 
+      Data:         
+        ? "Fn::Base64"
+        : |
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <broker persistent="false" xmlns="http://activemq.apache.org/schema/core">
+            <destinationPolicy>
+              <policyMap>
+                <policyEntries>
+                  <policyEntry topic="&gt;">
+                    <pendingMessageLimitStrategy>
+                      <constantPendingMessageLimitStrategy limit="1000"/>
+                    </pendingMessageLimitStrategy>
+                  </policyEntry>
+                </policyEntries>
+              </policyMap>
+            </destinationPolicy>
+            <plugins>
+            </plugins>
+          </broker>
+      Description: "Create an Amazon MQ configuration"
+      EngineType: ACTIVEMQ
+      EngineVersion: '5.15.0'
+      Name: !Sub '${EnvironmentName}-broker-configuration'
+
+
+
+  AmazonMQConfigurationAssociation:
+    Type: AWS::AmazonMQ::ConfigurationAssociation
+    Properties:
+      Broker: {Ref: AmazonMQ}
+      Configuration:
+        Id: {Ref: AmazonMQConfiguration}
+        Revision: {'Fn::GetAtt': [AmazonMQConfiguration, Revision]}
+
+
+  AmazonMQ:
+    Type: AWS::AmazonMQ::Broker
+    Properties: 
+      AutoMinorVersionUpgrade: false
+      BrokerName: !Sub '${EnvironmentName}'
+    # Configuration: 
+    #   Id: !Ref AmazonMQConfiguration
+    #   Revision: !Ref AmazonMQConfiguration
+      DeploymentMode: SINGLE_INSTANCE
+      EngineType: ActiveMQ
+      EngineVersion: '5.15.0'
+      HostInstanceType: mq.m5.large
+      Logs: 
+          Audit: true
+          General: true
+      MaintenanceWindowStartTime: 
+          DayOfWeek: Monday
+          TimeOfDay: 01:00
+          TimeZone: UTC
+      PubliclyAccessible: false
+      SecurityGroups: 
+        - !Select [0, !Ref MQSecurityGroup]
+      SubnetIds: 
+        - !Select [0,!Ref Subnets]
+      Users: 
+        - ConsoleAccess: true
+          Groups: 
+            - Admins
+          Password: Aequ2hie8dai0ohyih
+          Username: development
+        - ConsoleAccess: false
+          Password: yae9eiD1aine9googu
+          Username: development-mq

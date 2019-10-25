@@ -1,0 +1,58 @@
+Description: 'This template deploys environment s3 buckets'
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+Resources:
+
+  AgenthubUi:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub sedera-${EnvironmentName}-agenthub-ui
+      WebsiteConfiguration: 
+        ErrorDocument: index.html
+        IndexDocument: index.html
+
+
+  CustomerUi:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub sedera-${EnvironmentName}-customer-ui
+      WebsiteConfiguration: 
+        ErrorDocument: index.html
+        IndexDocument: index.html
+
+
+  Uploads:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub sedera-${EnvironmentName}-uploads
+      WebsiteConfiguration: 
+        ErrorDocument: index.html
+        IndexDocument: index.html
+
+
+    
+Outputs: 
+  AgenthubUi:
+      Description: S3 bucket name for AgenthubUi
+      Value: !Ref AgenthubUi
+
+  AgenthubBucketARN:
+      Description: S3 bucket name for AgenthubUi
+      Value: !GetAtt 'AgenthubUi.Arn'
+
+  CustomerUi:
+      Description: S3 bucket name for CustomerUi
+      Value: !Ref CustomerUi
+
+
+  CustomerUiBucketARN:
+      Description: S3 bucket name for CustomerUi
+      Value: !GetAtt 'CustomerUi.Arn'
+
+  Uploads:
+      Description: S3 bucket name for Uploads
+      Value: !Ref Uploads

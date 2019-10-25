@@ -1,0 +1,204 @@
+Description: >
+  AWS CloudFormation template to create a new VPC
+  or use an existing VPC for ECS deployment
+  in Create Cluster Wizard. Requires exactly 1
+  Instance Types for a Spot Request.
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  EcsClusterName:
+    Type: String
+    Description: >
+      Specifies the ECS Cluster Name with which the resources would be
+      associated
+    Default: default
+
+  EFSId:
+    Type: String
+    Description: Specifies the EFS.
+
+  EcsAmiId:
+    Type: String
+    Description: Specifies the AMI ID for your container instances.
+
+  EcsInstanceType:
+    Type: CommaDelimitedList
+    Description: >
+      Specifies the EC2 instance type for your container instances.
+      Defaults to m4.large
+    Default: m4.large
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  KeyName:
+    Type: String
+    Description: >
+      Optional - Specifies the name of an existing Amazon EC2 key pair
+      to enable SSH access to the EC2 instances in your cluster.
+    Default: ''
+
+  # VpcId:
+  #   Type: String
+  #   Description: >
+  #     Optional - Specifies the ID of an existing VPC in which to launch
+  #     your container instances. If you specify a VPC ID, you must specify a list of
+  #     existing subnets in that VPC. If you do not specify a VPC ID, a new VPC is created
+  #     with atleast 1 subnet.
+  #   Default: ''
+  #   AllowedPattern: "^(?:vpc-[0-9a-f]{18}|)$"
+  #   ConstraintDescription: >
+  #     VPC Id must begin with 'vpc-' or leave blank to have a
+  #     new VPC created
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: >
+      Optional - Specifies the Comma separated list of existing VPC Subnet
+      Ids where ECS instances will run
+    Default: ''
+
+  SecurityGroupId:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: >
+      Optional - Specifies the Security Group Id of an existing Security
+      Group. Leave blank to have a new Security Group created
+    Default: ''
+
+  AsgMaxSize:
+    Type: Number
+    Description: >
+      Specifies the number of instances to launch and register to the cluster.
+      Defaults to 1.
+    Default: '3'
+
+  IamRoleInstanceProfile:
+    Type: String
+    Description: >
+      Specifies the Name or the Amazon Resource Name (ARN) of the instance
+      profile associated with the IAM role for the instance
+
+  SecurityIngressFromPort:
+    Type: Number
+    Description: >
+      Optional - Specifies the Start of Security Group port to open on
+      ECS instances - defaults to port 0
+    Default: '0'
+
+  SecurityIngressToPort:
+    Type: Number
+    Description: >
+      Optional - Specifies the End of Security Group port to open on ECS
+      instances - defaults to port 65535
+    Default: '65535'
+
+  SecurityIngressCidrIp:
+    Type: String
+    Description: >
+      Optional - Specifies the CIDR/IP range for Security Ports - defaults
+      to 0.0.0.0/0
+    Default: 0.0.0.0/0
+
+  EcsEndpoint:
+    Type: String
+    Description: >
+      Optional - Specifies the ECS Endpoint for the ECS Agent to connect to
+    Default: ''
+
+  VpcAvailabilityZones:
+    Type: CommaDelimitedList
+    Description: >
+      Specifies a comma-separated list of 3 VPC Availability Zones for
+      the creation of new subnets. These zones must have the available status.
+    Default: ''
+
+  EbsVolumeSize:
+    Type: Number
+    Description: >
+      Optional - Specifies the Size in GBs, of the newly created Amazon
+      Elastic Block Store (Amazon EBS) volume
+    Default: '0'
+
+  EbsVolumeType:
+    Type: String
+    Description: Optional - Specifies the Type of (Amazon EBS) volume
+    Default: ''
+    AllowedValues:
+      - ''
+      - standard
+      - io1
+      - gp2
+      - sc1
+      - st1
+    ConstraintDescription: Must be a valid EC2 volume type.
+
+  DeviceName:
+    Type: String
+    Description: Optional - Specifies the device mapping for the Volume
+    Default: ''
+
+Resources:
+
+  EcsInstanceLc:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref EcsAmiId
+      InstanceType: !Select [ 0, !Ref EcsInstanceType ]
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref IamRoleInstanceProfile
+      KeyName: !Ref KeyName
+      SecurityGroups: !Ref SecurityGroupId
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/xvda"
+          Ebs:
+           VolumeSize: 20
+        - DeviceName: !Ref DeviceName
+          Ebs:
+           VolumeSize: !Ref EbsVolumeSize
+           VolumeType: !Ref EbsVolumeType
+      UserData:
+            Fn::Base64: !Sub |
+             #!/bin/bash
+             echo ECS_CLUSTER=${EcsClusterName} >> /etc/ecs/ecs.config
+             echo ECS_AVAILABLE_LOGGING_DRIVERS='["json-file","awslogs"]' >> /etc/ecs/ecs.config
+             PATH=$PATH:/usr/local/bin
+             yum update
+             yum -y install nfs-utils
+             mkdir /mnt/efs
+             DIR_SRC=${EFSId}.efs.us-east-1.amazonaws.com
+             DIR_TGT=/mnt/efs
+             mount -t nfs4 $DIR_SRC:/ $DIR_TGT
+             cp -p /etc/fstab /etc/fstab.back-$(date +%F)
+             echo -e "$DIR_SRC:/ \t\t $DIR_TGT \t\t nfs \t\t defaults \t\t 0 \t\t 0" | tee -a /etc/fstab
+
+  EcsInstanceAsg:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref SubnetIds
+      LaunchConfigurationName: !Ref EcsInstanceLc
+      MinSize: '0'
+      MaxSize: !Ref AsgMaxSize
+      DesiredCapacity: !Ref AsgMaxSize
+      Tags:
+        -
+          Key: Name
+          Value: !Sub 'sedera-${AWS::StackName}'
+          PropagateAtLaunch: 'true'
+        -
+          Key: Description
+          Value: "This instance is the part of the Auto Scaling group which was created through ECS Console"
+          PropagateAtLaunch: 'true'
+
+
+  MyCluster:
+    Type: AWS::ECS::Cluster
+    Properties: 
+      ClusterName: !Ref EcsClusterName
+
+
+Outputs:
+  EcsInstanceAsgName:
+    Description: Auto Scaling Group Name for ECS Instances
+    Value: !Ref EcsInstanceAsg

@@ -1,0 +1,135 @@
+Description: >
+  This template deploys a Amazon ECR
+
+# Parameters:
+#   EnvironmentName:
+#     Description: An environment name that will be prefixed to resource names
+#     Type: String
+
+
+Resources:
+
+  ECRAccount:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-account
+
+
+  ECRAdmin:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-admin
+
+
+  ECRAgenthub:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-agenthub
+
+
+  ECRAudit:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-audit
+
+
+  ECRAuth:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-auth
+
+
+  ECRBatch:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-batch
+
+
+  ECRCommunication:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-communication
+
+
+  ECRConfig:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-config
+
+
+  ECRCore:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-core
+
+
+  ECRCustomer:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-customer
+
+
+  ECRDashboard:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-dashboard
+
+
+  ECRDiscovery:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-discovery
+
+
+  ECREsproxy:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-es-proxy
+
+
+  ECRGateway:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-gateway
+
+
+  ECRMqproxy:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-mq-proxy
+
+
+  ECRNotification:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-notification
+
+
+  ECROrigination:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-origination
+
+
+  ECRReporting:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-reporting
+
+
+  ECRUiagenthub:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-ui-agenthub
+
+
+  ECRUicustomer:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-ui-customer
+
+
+  ECRZipkin:
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: sedera-zipkin

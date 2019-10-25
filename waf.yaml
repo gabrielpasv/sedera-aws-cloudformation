@@ -1,0 +1,84 @@
+Description: >
+  This template deploys a cloudfront distribution
+
+# Parameters:
+
+#   EnvironmentName:
+#     Description: An environment name that will be prefixed to resource names
+#     Type: String
+
+
+Resources:
+
+  AllowedIps: 
+    Type: "AWS::WAF::IPSet"
+    Properties: 
+      Name: "IPSet for allowed IP adresses"
+      IPSetDescriptors: 
+        - 
+          Type: "IPV4"
+          Value: "35.199.66.47/32"
+        - 
+          Type: "IPV4"
+          Value: "123.231.106.249/32"
+        - 
+          Type: "IPV4"
+          Value: "35.203.157.42/32"
+        - 
+          Type: "IPV4"
+          Value: "207.238.83.178/32"
+        - 
+          Type: "IPV4"
+          Value: "35.199.157.7/32"
+        - 
+          Type: "IPV4"
+          Value: "71.78.220.227/32"
+        - 
+          Type: "IPV4"
+          Value: "104.155.77.122/32"
+        - 
+          Type: "IPV4"
+          Value: "35.186.144.97/32"
+        - 
+          Type: "IPV4"
+          Value: "35.186.164.184/32"
+        - 
+          Type: "IPV4"
+          Value: "35.199.27.30/32"
+
+
+
+  IpFilteringRule: 
+    Type: "AWS::WAF::Rule"
+    Properties: 
+      Name: "allowed-ips"
+      MetricName: "IpFilteringRule"
+      Predicates: 
+        - 
+          DataId: 
+            Ref: "AllowedIps"
+          Negated: false
+          Type: "IPMatch"
+
+
+
+  IpFilteringWebACL: 
+    Type: "AWS::WAF::WebACL"
+    Properties: 
+      Name: "ip-filtering"
+      DefaultAction: 
+        Type: "ALLOW"
+      MetricName: "IpFilteringWebACL"
+      Rules: 
+        - 
+          Action: 
+            Type: "ALLOW"
+          Priority: 1
+          RuleId: 
+            Ref: "IpFilteringRule"
+
+Outputs:
+
+    IpFilteringWebACL:
+        Description: A reference to the WebACL id
+        Value: !Ref IpFilteringWebACL

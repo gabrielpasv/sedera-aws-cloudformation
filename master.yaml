@@ -1,0 +1,170 @@
+Description: >
+
+    Last Modified: 
+    Author: Gabriel Paschoal Vicente <gabrielpasv@gmail.com>
+
+Resources:
+
+    VPC:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/vpc.yaml
+            Parameters:
+                EnvironmentName:    !Ref AWS::StackName
+                VpcCIDR:            172.36.0.0/16
+                PublicSubnet1CIDR:  172.36.1.0/24
+                PublicSubnet2CIDR:  172.36.2.0/24
+                PrivateSubnet1CIDR: 172.36.3.0/24
+                PrivateSubnet2CIDR: 172.36.4.0/24
+
+
+    IAMRoles:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/roles.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+
+
+    SecurityGroups:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/security-groups.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                VPC: !GetAtt VPC.Outputs.VPC
+
+
+    SederaGateway:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/instances.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                InstanceType: t2.micro
+                InstanceImage: ami-0b69ea66ff7391e80
+                KeyPair: sedera-key
+                IsEIP: true
+                VPC: !GetAtt VPC.Outputs.VPC
+                Subnets: !GetAtt VPC.Outputs.PublicSubnets
+                SecurityGroup: !GetAtt SecurityGroups.Outputs.SederaGatewaySecurityGroup
+                FriendlyAppName: sedera-gateway
+
+
+    S3Buckets:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/s3.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+
+
+    Loadbalancers:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/alb.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                VPC: !GetAtt VPC.Outputs.VPC
+                Subnets: !GetAtt VPC.Outputs.PublicSubnets
+                SecurityGroup: !GetAtt SecurityGroups.Outputs.ELBSecurityGroup
+
+
+
+    RDS:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/rds.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                DBEngine: postgres
+                DBEngineVersion: "9.6"
+                DBUsername: development
+                DBSecurityGroup: !GetAtt SecurityGroups.Outputs.RDSSecurityGroup
+                DBAllocatedStorage: 256
+                DBPassword: Wiebeafe8tie5sh
+                DBInstanceClass: db.t2.medium
+                Subnets: !GetAtt VPC.Outputs.PrivateSubnets
+                MultiAZ: false
+
+# EFS is only needed for development environment for jenkins
+    EFS:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/efs.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                Subnets: !GetAtt VPC.Outputs.PrivateSubnets
+                MountTargetSecurityGroup: !GetAtt SecurityGroups.Outputs.EFSSecurityGroup
+
+
+
+    ElasticSearch:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+          TemplateURL: 'https://s3.amazonaws.com/sedera-cf/elasticsearch.yaml'
+          Parameters:
+            ClusterName: logging-central
+            KMSENable: false
+            KMSID: ""
+            Subnet: !GetAtt VPC.Outputs.PrivateSubnets
+            ESSecurityGroup: !GetAtt SecurityGroups.Outputs.ESSecurityGroup
+
+
+    AmazonMQ:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+          TemplateURL: 'https://s3.amazonaws.com/sedera-cf/amazon-mq.yaml'
+          Parameters:
+            EnvironmentName: !Ref AWS::StackName
+            MQSecurityGroup: !GetAtt SecurityGroups.Outputs.MQSecurityGroup
+            VPC: !GetAtt VPC.Outputs.VPC
+            Subnets: !GetAtt VPC.Outputs.PrivateSubnets
+
+
+    ECR:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+          TemplateURL: https://s3.amazonaws.com/sedera-cf/ecr.yaml
+
+
+
+    ECS:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+          TemplateURL: https://s3.amazonaws.com/sedera-cf/ecs.yaml
+          Parameters:
+            EnvironmentName: !Ref AWS::StackName
+            EcsClusterName: !Sub 'sedera-${AWS::StackName}'
+            EcsAmiId: ami-aff65ad2
+            EcsInstanceType: r4.large
+            KeyName: sedera-key
+            # VpcId: !GetAtt VPC.Outputs.VPC
+            SubnetIds: !GetAtt VPC.Outputs.PrivateSubnets
+            SecurityGroupId: !GetAtt SecurityGroups.Outputs.ECSSecurityGroup
+            VpcAvailabilityZones: us-east-1b,us-east-1a,us-east-1c,us-east-1e,us-east-1f,us-east-1d
+            EbsVolumeSize: 512
+            EbsVolumeType:  gp2
+            DeviceName: /dev/xvdcz
+            IamRoleInstanceProfile: !GetAtt IAMRoles.Outputs.ECSInstanceProfile
+            EFSId: !GetAtt EFS.Outputs.FileSystem
+
+
+    WAF:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/waf.yaml
+
+
+    Cloudfront:
+        Type: AWS::CloudFormation::Stack
+        Properties:
+            TemplateURL: https://s3.amazonaws.com/sedera-cf/cloudfront.yaml
+            Parameters:
+                EnvironmentName: !Ref AWS::StackName
+                OriginName: !Ref AWS::StackName
+                WebACLId: !GetAtt WAF.Outputs.IpFilteringWebACL
+                CustomerUiBucket: !GetAtt S3Buckets.Outputs.CustomerUi
+                CustomerUiBucketARN: !GetAtt S3Buckets.Outputs.CustomerUiBucketARN
+                AgenthubBucket: !GetAtt S3Buckets.Outputs.AgenthubUi
+                AgenthubBucketARN: !GetAtt S3Buckets.Outputs.AgenthubBucketARN

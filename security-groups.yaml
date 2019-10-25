@@ -1,0 +1,182 @@
+Description: >
+    This template deploys the security groups required by our entire stack.
+    We create them in a seperate nested template, so they can be referenced
+    by all of the other nested templates.
+
+Parameters:
+    
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
+    
+    VPC:
+        Type: AWS::EC2::VPC::Id
+        Description: Choose which VPC the security groups should be deployed to
+
+Resources:
+
+    RDSSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-rds-sg
+            VpcId: !Ref VPC
+            GroupDescription: Access to the RDS
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '5432'
+              ToPort: '5432'
+              CidrIp: 0.0.0.0/0
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-rds-sg     
+
+    EFSSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-efs-sg
+            VpcId: !Ref VPC
+            GroupDescription: Access to the RDS
+            SecurityGroupIngress:
+            - IpProtocol: -1
+              CidrIp: 0.0.0.0/0
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-efs-sg    
+
+    MQSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-mq-sg
+            VpcId: !Ref VPC
+            GroupDescription: Access to the MQ
+            SecurityGroupIngress:
+            - IpProtocol: -1
+              CidrIp: 0.0.0.0/0
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-mq-sg 
+
+
+    ESSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-es-sg
+            VpcId: !Ref VPC
+            GroupDescription: Access to the ES
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '443'
+              ToPort: '443'
+              CidrIp: 0.0.0.0/0
+            # - IpProtocol: tcp
+            #   FromPort: '443'
+            #   ToPort: '443'
+            #   CidrIp: 0.0.0.0/0
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-es-sg            
+
+
+    SederaGatewaySecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-gateway-sg
+            VpcId: !Ref VPC
+            GroupDescription: Gateway to access the instances
+            SecurityGroupIngress:
+                - CidrIp: 0.0.0.0/0 
+                  IpProtocol: tcp
+                  FromPort: '22'
+                  ToPort: '22'
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-gateway-sg
+
+    ECSSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-ecs-sg
+            VpcId: !Ref VPC
+            GroupDescription: ecs security group
+            SecurityGroupIngress:
+                - CidrIp: 0.0.0.0/0 
+                  IpProtocol: tcp
+                  FromPort: '22'
+                  ToPort: '22'
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-ecs-sg
+
+    ECSInboundIngress:
+        Type: AWS::EC2::SecurityGroupIngress
+        DependsOn: ECSSecurityGroup
+        Properties:
+            IpProtocol: -1
+            SourceSecurityGroupId:
+              Fn::GetAtt:
+              - ECSSecurityGroup
+              - GroupId
+            GroupId:
+              Fn::GetAtt:
+              - ECSSecurityGroup
+              - GroupId
+
+
+    ELBSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupName: !Sub ${EnvironmentName}-elb-sg
+            VpcId: !Ref VPC
+            GroupDescription: Gateway to access the instances
+            SecurityGroupIngress:
+                - SourceSecurityGroupId: !Ref ECSSecurityGroup
+                  IpProtocol: tcp
+                  FromPort: '0'
+                  ToPort: '65535'
+                - CidrIp: 0.0.0.0/0 
+                  IpProtocol: tcp
+                  FromPort: '443'
+                  ToPort: '443'
+            Tags:
+                - Key: Name
+                  Value: !Sub ${EnvironmentName}-elb-sg
+
+
+    ELBInboundIngress:
+        Type: AWS::EC2::SecurityGroupIngress
+        DependsOn: ELBSecurityGroup
+        Properties:
+            IpProtocol: -1
+            SourceSecurityGroupId:
+              Fn::GetAtt:
+              - ELBSecurityGroup
+              - GroupId
+            GroupId:
+              Fn::GetAtt:
+              - ELBSecurityGroup
+              - GroupId  
+
+
+Outputs:
+
+    RDSSecurityGroup:
+        Description: A reference to the security group for rds 
+        Value: !Ref RDSSecurityGroup
+    EFSSecurityGroup:
+        Description: A reference to the security group for efs 
+        Value: !Ref EFSSecurityGroup
+    MQSecurityGroup:
+        Description: A reference to the security group for mq 
+        Value: !Ref MQSecurityGroup
+    ESSecurityGroup:
+        Description: A reference to the security group for es
+        Value: !Ref ESSecurityGroup
+    SederaGatewaySecurityGroup:
+        Description: A reference to the security group for gateway
+        Value: !Ref SederaGatewaySecurityGroup
+    ECSSecurityGroup:
+        Description: A reference to the security group for aws ecs 
+        Value: !Ref ECSSecurityGroup
+    ELBSecurityGroup:
+        Description: A reference to the security group for aws elb 
+        Value: !Ref ELBSecurityGroup

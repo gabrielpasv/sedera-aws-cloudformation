@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: This template deploy Elasticsearch Domain creation and output elasticsearch endpoint address for use in deployment build code
+
+Parameters:
+    ClusterName:
+        Default: logging-central
+        Description: The Elasticsearch domain name
+        Type: String
+        MinLength: '1'
+        MaxLength: '64'
+        ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+
+    KMSENable:
+        Default: false
+        Description: Enable/Disable data encription at rest
+        Type: String
+
+    KMSID:
+        Default: false
+        Description:  KMS Key ID
+        Type: String  
+
+    Subnet:
+        Description: Choose which subnets this es subnets should be deployed to
+        Type: List<AWS::EC2::Subnet::Id>
+
+    ESSecurityGroup:
+        Description: ES SecuritySG Ids
+        Type: List<AWS::EC2::SecurityGroup::Id>
+
+
+Conditions:
+    KMSID: !Not [!Equals [!Ref KMSID,""]]
+    KMSENable: !Not [!Equals [!Ref KMSENable,""]]
+
+Resources:
+
+    ElasticsearchDomain:
+        Type: AWS::Elasticsearch::Domain
+        Properties: 
+            DomainName: !Ref ClusterName
+            AccessPolicies:
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Deny
+                    Principal:
+                      AWS: '*'
+                    Action: 'es:*'
+                    Resource: '*'
+            EBSOptions:
+                EBSEnabled: 'true'
+                VolumeSize: '256'
+                VolumeType: 'gp2'
+            ElasticsearchClusterConfig:
+                InstanceCount: '1'
+                InstanceType: 'm4.large.elasticsearch'
+            ElasticsearchVersion: '5.5'
+            EncryptionAtRestOptions:
+                Enabled: !If [KMSENable, !Ref KMSENable, !Ref "AWS::NoValue"]
+                KmsKeyId: !If [KMSID, !Ref KMSID, !Ref "AWS::NoValue"]
+            SnapshotOptions:
+                AutomatedSnapshotStartHour: '0'
+            VPCOptions: 
+              SecurityGroupIds: 
+                - !Select [0,!Ref ESSecurityGroup]
+              SubnetIds: 
+                - !Select [0,!Ref Subnet]
+
+Outputs:
+    DomainArn:
+        Value: !GetAtt ElasticsearchDomain.DomainArn
+    DomainEndpoint:
+        Value: !GetAtt ElasticsearchDomain.DomainEndpoint

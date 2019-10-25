@@ -1,0 +1,47 @@
+Description: >
+  This template deploys a EFS share
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  Subnets:
+        Description: Choose which subnets this EFS chare should be deployed to
+        Type: List<AWS::EC2::Subnet::Id>
+
+  MountTargetSecurityGroup:
+        Description: Select the Security Group to use for the EFS Share
+        Type: List<AWS::EC2::SecurityGroup::Id>
+
+Resources:
+
+  FileSystem:      
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      FileSystemTags:
+        - Key: Name
+          Value: jenkins-ci
+      PerformanceMode: generalPurpose
+
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: "FileSystem"
+      SubnetId: !Select [0,!Ref Subnets]
+      SecurityGroups: !Ref MountTargetSecurityGroup
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: "FileSystem"
+      SubnetId: !Select [1,!Ref Subnets]
+      SecurityGroups: !Ref MountTargetSecurityGroup      
+
+Outputs:
+  FileSystem:
+    Description: Endpoint Name for EFS Share
+    Value: !Ref FileSystem

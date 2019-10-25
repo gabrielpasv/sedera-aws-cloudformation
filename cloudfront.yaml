@@ -1,0 +1,164 @@
+Description: >
+  This template deploys a cloudfront distribution
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  OriginName:
+    Description: S3 bucket Name for the Orgin CloudFront
+    Type: String
+
+  WebACLId:
+    Description: The WebACLId to be used in cloudfront
+    Type: String
+
+  CustomerUiBucket:
+    Description: The bucket name for customer-ui
+    Type: String
+
+  AgenthubBucket:
+    Description: The bucket name for agenthub-ui
+    Type: String  
+
+  CustomerUiBucketARN:
+    Description: The arn of bucket 
+    Type: String  
+
+  AgenthubBucketARN:
+    Description: The arn of bucket 
+    Type: String  
+
+
+Resources:
+
+# CustomerUi
+
+  CloudFrontOriginAccessIdentityCustomer:
+    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Ref EnvironmentName
+
+  CloudFrontDistributionCustomer:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Sub 'sedera-${OriginName}-customer-ui.s3.amazonaws.com'
+            Id: !Ref EnvironmentName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub
+               - origin-access-identity/cloudfront/${ID}
+               - { ID: !Ref CloudFrontOriginAccessIdentityCustomer }
+        Enabled: 'true'
+        Comment: !Ref EnvironmentName
+        DefaultRootObject: index.html
+        Aliases: 
+         - !Sub customer-ui-${EnvironmentName}.costshareaccount.com
+        HttpVersion: http2
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          TargetOriginId: !Ref EnvironmentName
+          ForwardedValues:
+            QueryString: 'true'
+            Cookies:
+              Forward: all
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          # CloudFrontDefaultCertificate: 'true'
+          AcmCertificateArn: arn:aws:acm:us-east-1:525128375046:certificate/55e0ddfb-2cdb-4b5e-ab80-8eabc7b34eae
+          MinimumProtocolVersion: TLSv1.1_2016
+          SslSupportMethod: sni-only
+        WebACLId: !Ref WebACLId
+
+
+  BucketPolicyCustomerUI:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref CustomerUiBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser:
+                Fn::GetAtt: [ CloudFrontOriginAccessIdentityCustomer , S3CanonicalUserId ]
+            Action: "s3:GetObject"
+            Resource: !Sub "${CustomerUiBucketARN}/*"
+
+
+
+# Agenthub
+
+
+  CloudFrontOriginAccessIdentityAgenthub:
+    Type: 'AWS::CloudFront::CloudFrontOriginAccessIdentity'
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Ref EnvironmentName
+
+  CloudFrontDistributionAgenthub:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Sub 'sedera-${OriginName}-agenthub-ui.s3.amazonaws.com'
+            Id: !Ref EnvironmentName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub
+               - origin-access-identity/cloudfront/${ID}
+               - { ID: !Ref CloudFrontOriginAccessIdentityAgenthub }
+        Enabled: 'true'
+        Comment: !Ref EnvironmentName
+        DefaultRootObject: index.html
+        Aliases: 
+         - !Sub agenthub-ui-${EnvironmentName}.costshareaccount.com
+        HttpVersion: http2
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          TargetOriginId: !Ref EnvironmentName
+          ForwardedValues:
+            QueryString: 'true'
+            Cookies:
+              Forward: all
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          # CloudFrontDefaultCertificate: 'true'
+          AcmCertificateArn: arn:aws:acm:us-east-1:525128375046:certificate/55e0ddfb-2cdb-4b5e-ab80-8eabc7b34eae
+          MinimumProtocolVersion: TLSv1.1_2016
+          SslSupportMethod: sni-only
+        WebACLId: !Ref WebACLId
+
+
+  BucketPolicyAgenthubUI:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref AgenthubBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser:
+                Fn::GetAtt: [ CloudFrontOriginAccessIdentityAgenthub , S3CanonicalUserId ]
+            Action: "s3:GetObject"
+            Resource: !Sub "${AgenthubBucketARN}/*"

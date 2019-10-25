@@ -1,0 +1,85 @@
+Description: >
+  This template deploys a RDS Instance.It takes Database Family, DB Engine, DB Family, DB UserName/Password
+  Security groups, Storagsize,  Subnets & MultiAz as paramters and Deploy a RDS instance into selected Subnet group
+  Template automatically create a RDS subnet group for deploying the RDS instance.
+
+Parameters:
+
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  DBEngine:
+    Description: RDS Engine name
+    Type: String
+
+  DBEngineVersion:
+    Description: RDS Engine name
+    Type: String
+
+  DBUsername:
+    Description: RDS User name
+    Type: String
+
+  DBSecurityGroup:
+    Description: RDS SecuritySG Ids
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  DBAllocatedStorage:
+    Description: RDS Storage in GBs
+    Type: String
+
+  DBPassword:
+    NoEcho: true
+    Description: The RDS admin account password
+    Type: String
+    MinLength: 1
+    MaxLength: 41
+
+  DBInstanceClass:
+    Description: RDS class
+    Type: String
+
+  Subnets:
+    Description: Choose which subnets this rds subnets should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+  MultiAZ:
+    Description: Is MultiAZs ?
+    Type: String
+
+Resources:
+
+
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: !Sub '${EnvironmentName}-subnetgroup-${AWS::Region}'
+      DBSubnetGroupName: !Sub '${EnvironmentName}-subnetgroup-${AWS::Region}'
+      SubnetIds: !Ref Subnets
+
+  PostgresRDS:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-db'
+      Engine: !Ref DBEngine
+      EngineVersion: !Ref DBEngineVersion
+      MasterUsername: !Ref DBUsername
+      DBInstanceClass: !Ref DBInstanceClass
+      VPCSecurityGroups: !Ref DBSecurityGroup
+      AllocatedStorage: !Ref DBAllocatedStorage
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: !Ref MultiAZ
+      BackupRetentionPeriod: 35
+      PreferredBackupWindow: 03:00-03:30
+      PreferredMaintenanceWindow: sun:04:00-sun:04:30
+      StorageType: gp2
+      StorageEncrypted: true
+      CopyTagsToSnapshot: true
+      PubliclyAccessible: false
+
+Outputs:
+  Endpoint:
+    Description: Endpoint Name for RDS Instance
+    Value: !Ref PostgresRDS
