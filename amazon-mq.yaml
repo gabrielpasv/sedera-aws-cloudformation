@@ -88,8 +88,8 @@ Resources:
         - ConsoleAccess: true
           Groups: 
             - Admins
-          Password: Aequ2hie8dai0ohyih
+          Password: xxxxxxxxxxxxx
           Username: development
         - ConsoleAccess: false
-          Password: yae9eiD1aine9googu
+          Password: xxxxxxxxxxxxx
           Username: development-mq

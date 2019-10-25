@@ -82,7 +82,7 @@ Resources:
                 DBUsername: development
                 DBSecurityGroup: !GetAtt SecurityGroups.Outputs.RDSSecurityGroup
                 DBAllocatedStorage: 256
-                DBPassword: Wiebeafe8tie5sh
+                DBPassword: xxxxxxxxxx
                 DBInstanceClass: db.t2.medium
                 Subnets: !GetAtt VPC.Outputs.PrivateSubnets
                 MultiAZ: false
